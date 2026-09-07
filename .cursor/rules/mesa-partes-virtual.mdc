@@ -1,0 +1,576 @@
+---
+alwaysApply: true
+---
+
+---
+
+description: Reglas generales y contexto permanente del proyecto académico Mesa de Partes Virtual
+alwaysApply: true
+-----------------
+
+# CONTEXTO DEL PROYECTO
+
+Estamos desarrollando un proyecto académico llamado:
+
+"Implementación del Sistema de Mesa de Partes Virtual para la Gestión Documental Institucional"
+
+El proyecto corresponde al curso Fundamentos de Proyectos de Sistemas de Información.
+
+El equipo está compuesto por 3 estudiantes.
+
+El desarrollo completo se realiza en aproximadamente 2 semanas utilizando Scrum.
+
+El producto debe ser funcional y demostrable, pero NO pretende ser un sistema empresarial completo.
+
+La prioridad del proyecto es:
+
+1. Que funcione correctamente.
+2. Que sea sencillo de entender.
+3. Que sea sencillo de explicar durante una exposición.
+4. Que pueda relacionarse claramente con las historias de usuario del Scrum.
+5. Que no contenga arquitectura, abstracciones ni funcionalidades innecesarias.
+
+# PRINCIPIO PRINCIPAL
+
+SIEMPRE elegir la solución más sencilla que cumpla correctamente el requisito.
+
+No sobreingenierizar.
+
+No agregar funcionalidades que no hayan sido solicitadas.
+
+No implementar anticipadamente historias de usuario futuras.
+
+No reorganizar código que ya funciona salvo que sea estrictamente necesario.
+
+# STACK OBLIGATORIO
+
+## Frontend
+
+* Vue.js
+* Vue Router
+* JavaScript
+* HTML
+* CSS
+* fetch() para consumir la API
+
+NO utilizar TypeScript.
+
+NO utilizar Axios salvo que se solicite explícitamente.
+
+NO utilizar Pinia salvo que aparezca una necesidad real y se solicite explícitamente.
+
+NO utilizar frameworks CSS salvo que se solicite explícitamente.
+
+## Backend
+
+* Node.js
+* Express.js
+* JavaScript
+* API REST
+
+Paquetes permitidos cuando sean necesarios:
+
+* express
+* pg
+* bcryptjs
+* jsonwebtoken
+* multer
+* cors
+* dotenv
+* nodemailer
+
+Evitar dependencias adicionales.
+
+## Base de datos
+
+* PostgreSQL
+* paquete pg
+* consultas SQL directas
+
+NO utilizar:
+
+* Prisma
+* Sequelize
+* TypeORM
+* otro ORM
+
+# ARQUITECTURA
+
+La arquitectura completa es:
+
+Navegador
+↓
+Vue.js
+↓ HTTP / JSON
+Express.js
+↓ SQL
+PostgreSQL
+
+No agregar otras capas de infraestructura.
+
+NO utilizar:
+
+* microservicios
+* Docker salvo solicitud explícita
+* GraphQL
+* Redis
+* RabbitMQ
+* Kubernetes
+* arquitectura hexagonal
+* Clean Architecture
+* Domain Driven Design
+* CQRS
+* patrones empresariales innecesarios
+* repositorios genéricos
+* clases abstractas innecesarias
+
+# ESTRUCTURA DEL PROYECTO
+
+Mantener aproximadamente esta estructura:
+
+mesa-partes/
+.cursor/
+rules/
+mesa-partes.mdc
+
+```
+frontend/
+    src/
+        components/
+        views/
+        router/
+        services/
+        App.vue
+        main.js
+    package.json
+
+backend/
+    src/
+        controllers/
+        routes/
+        middleware/
+        db.js
+        app.js
+    uploads/
+    .env
+    package.json
+
+database/
+    schema.sql
+    seed.sql
+
+.gitignore
+README.md
+```
+
+Pueden agregarse algunos archivos adicionales si son realmente necesarios.
+
+No crear directorios nuevos simplemente para aplicar patrones de arquitectura.
+
+# ROLES DEL SISTEMA
+
+Solo existen dos roles:
+
+USER
+ADMIN
+
+USER representa a un ciudadano o usuario externo.
+
+ADMIN representa al encargado de Mesa de Partes.
+
+# FUNCIONALIDADES DEL CIUDADANO
+
+El ciudadano debe poder:
+
+1. Registrarse.
+2. Iniciar sesión.
+3. Cerrar sesión.
+4. Registrar un documento.
+5. Adjuntar un archivo PDF.
+6. Obtener un código único de seguimiento.
+7. Visualizar sus documentos.
+8. Visualizar el detalle de un documento.
+9. Consultar un trámite mediante su código de seguimiento.
+10. Visualizar el estado actual.
+11. Visualizar el historial de estados.
+
+# FUNCIONALIDADES DEL ADMINISTRADOR
+
+El administrador debe poder:
+
+1. Iniciar sesión.
+2. Visualizar todos los documentos registrados.
+3. Visualizar el detalle de un documento.
+4. Descargar el PDF adjunto.
+5. Cambiar el estado del documento.
+6. Agregar una observación al cambiar el estado.
+7. Visualizar estadísticas básicas del sistema.
+
+# FUNCIONALIDADES DEL SISTEMA
+
+El sistema debe:
+
+1. Generar códigos de seguimiento únicos.
+2. Registrar los cambios de estado.
+3. Mantener un registro de auditoría sencillo.
+4. Proteger las rutas que requieren autenticación.
+5. Diferenciar rutas USER y ADMIN.
+6. Enviar una notificación por correo cuando cambie el estado si existe configuración SMTP.
+
+# ESTADOS DEL DOCUMENTO
+
+Utilizar únicamente:
+
+RECIBIDO
+EN_REVISION
+ATENDIDO
+RECHAZADO
+
+No agregar más estados sin solicitud explícita.
+
+# BASE DE DATOS
+
+Mantener principalmente estas cuatro tablas:
+
+users
+documents
+status_history
+audit_logs
+
+## users
+
+Debe almacenar como mínimo:
+
+* id
+* name
+* email
+* password
+* role
+* created_at
+
+Roles:
+
+USER
+ADMIN
+
+La contraseña nunca debe almacenarse en texto plano.
+
+## documents
+
+Debe almacenar como mínimo:
+
+* id
+* tracking_code
+* user_id
+* subject
+* document_type
+* description
+* file_path
+* status
+* observation
+* created_at
+* updated_at
+
+## status_history
+
+Debe almacenar como mínimo:
+
+* id
+* document_id
+* status
+* observation
+* changed_by
+* created_at
+
+## audit_logs
+
+Debe almacenar como mínimo:
+
+* id
+* user_id
+* action
+* description
+* created_at
+
+# CÓDIGO DE SEGUIMIENTO
+
+Utilizar un código similar a:
+
+MP-2026-00001
+MP-2026-00002
+MP-2026-00003
+
+Debe ser único.
+
+La solución debe mantenerse simple.
+
+# ARCHIVOS
+
+Solo se requiere adjuntar archivos PDF.
+
+Guardar físicamente los archivos dentro de:
+
+backend/uploads/
+
+Guardar en PostgreSQL únicamente la ruta o nombre correspondiente.
+
+Utilizar multer.
+
+No almacenar archivos binarios directamente en PostgreSQL.
+
+# API APROXIMADA
+
+Mantener una API pequeña.
+
+## Autenticación
+
+POST /api/auth/register
+POST /api/auth/login
+
+## Ciudadano
+
+POST /api/documents
+GET /api/documents/my
+GET /api/documents/:id
+GET /api/documents/track/:code
+
+## Administrador
+
+GET /api/admin/documents
+PATCH /api/admin/documents/:id/status
+GET /api/admin/stats
+
+Pueden existir endpoints auxiliares si son necesarios, pero evitar crear una API innecesariamente grande.
+
+# AUTENTICACIÓN
+
+Utilizar:
+
+bcryptjs para contraseñas.
+jsonwebtoken para JWT.
+
+El frontend puede almacenar el JWT en localStorage para este proyecto académico.
+
+Las rutas protegidas del backend deben validar el token.
+
+Las rutas administrativas deben comprobar además que:
+
+role === "ADMIN"
+
+No implementar sistemas complejos de refresh tokens.
+
+# FRONTEND
+
+Mantener un diseño sencillo.
+
+No intentar construir una copia visual exacta de la UCSM.
+
+La interfaz debe verse ordenada y académicamente presentable.
+
+Priorizar usabilidad sobre diseño avanzado.
+
+Las vistas aproximadas son:
+
+/login
+/register
+/track
+/dashboard
+/documents/new
+/documents/:id
+/admin
+/admin/documents/:id
+
+No agregar páginas innecesarias.
+
+# DASHBOARD DEL USUARIO
+
+Debe mostrar:
+
+* nombre del usuario;
+* botón para registrar documento;
+* tabla o lista de documentos;
+* código;
+* asunto;
+* fecha;
+* estado;
+* acceso al detalle.
+
+# DASHBOARD ADMINISTRATIVO
+
+Debe mostrar indicadores básicos:
+
+* total de documentos;
+* recibidos;
+* en revisión;
+* atendidos;
+* rechazados.
+
+También debe mostrar los documentos registrados.
+
+No implementar gráficos complejos salvo solicitud explícita.
+
+# SCRUM
+
+El desarrollo está relacionado directamente con historias de usuario.
+
+Historias principales:
+
+HU01 - Registro de usuario
+HU02 - Inicio de sesión
+HU03 - Registro de documento
+HU04 - Adjuntar PDF
+HU05 - Generación de código de seguimiento
+HU06 - Visualización de documentos propios
+HU07 - Consulta de trámite
+HU08 - Visualización administrativa de documentos
+HU09 - Cambio de estado
+HU10 - Historial de estados
+HU11 - Estadísticas administrativas
+HU12 - Auditoría
+HU13 - Notificación por correo
+
+Cuando el usuario indique:
+
+"Implementemos HUXX"
+
+trabajar únicamente en esa historia y en los cambios mínimos que necesita.
+
+NO implementar historias posteriores anticipadamente.
+
+# FORMA DE TRABAJO CON CADA HISTORIA
+
+Antes de editar código:
+
+1. Revisar el código existente.
+2. Identificar qué ya funciona.
+3. Identificar únicamente los archivos necesarios.
+4. No modificar código no relacionado.
+5. Mantener compatibilidad con lo desarrollado anteriormente.
+
+Durante la implementación:
+
+1. Hacer cambios pequeños.
+2. Mantener JavaScript sencillo.
+3. Evitar abstracciones innecesarias.
+4. Mantener nombres claros.
+5. Reutilizar código existente cuando sea apropiado.
+
+Después de la implementación:
+
+1. Indicar qué archivos fueron creados.
+2. Indicar qué archivos fueron modificados.
+3. Explicar brevemente qué se implementó.
+4. Dar pasos concretos para probar manualmente la funcionalidad.
+5. Señalar cualquier error o limitación encontrada.
+6. No continuar automáticamente con otra historia de usuario.
+
+# CRITERIO DE DONE
+
+Una historia puede considerarse DONE solamente cuando:
+
+* la funcionalidad solicitada está implementada;
+* frontend y backend están conectados cuando corresponda;
+* la base de datos funciona cuando corresponda;
+* las validaciones principales funcionan;
+* puede probarse manualmente de principio a fin;
+* no existen errores que impidan utilizar la funcionalidad.
+
+No considerar DONE una historia solamente porque una parte del frontend o backend está terminada.
+
+# ESTILO DE CÓDIGO
+
+Utilizar código JavaScript sencillo y fácil de explicar.
+
+Preferir:
+
+const
+async/await
+funciones pequeñas
+nombres descriptivos
+
+Evitar:
+
+código excesivamente funcional
+metaprogramación
+abstracciones difíciles de explicar
+clases cuando una función sencilla sea suficiente
+comentarios innecesarios
+
+Comentar solamente cuando ayude a comprender una decisión.
+
+# MANEJO DE ERRORES
+
+Los endpoints deben responder con códigos HTTP razonables.
+
+Ejemplos:
+
+200 OK
+201 Created
+400 Bad Request
+401 Unauthorized
+403 Forbidden
+404 Not Found
+500 Internal Server Error
+
+Las respuestas JSON pueden seguir una estructura sencilla:
+
+{
+"message": "Mensaje"
+}
+
+No crear una infraestructura compleja de errores.
+
+# VALIDACIONES
+
+Implementar validaciones básicas tanto en frontend como backend cuando corresponda.
+
+Ejemplos:
+
+* campos requeridos;
+* correo válido;
+* contraseña no vacía;
+* archivo PDF;
+* documento existente;
+* estado válido.
+
+No agregar bibliotecas de validación salvo que sean realmente necesarias.
+
+# SEGURIDAD ACADÉMICA MÍNIMA
+
+Implementar como mínimo:
+
+* bcrypt para contraseñas;
+* JWT;
+* queries parametrizadas de PostgreSQL;
+* validación del tipo PDF;
+* autorización por rol;
+* no exponer password en respuestas;
+* variables sensibles dentro de .env.
+
+No construir infraestructura de seguridad empresarial.
+
+# VARIABLES DE ENTORNO
+
+Utilizar aproximadamente:
+
+PORT
+DATABASE_URL
+JWT_SECRET
+
+Para correo, cuando corresponda:
+
+SMTP_HOST
+SMTP_PORT
+SMTP_USER
+SMTP_PASS
+SMTP_FROM
+
+No colocar credenciales directamente en código.
+
+# PRINCIPIO FINAL
+
+Este proyecto debe parecer y ser un proyecto universitario bien organizado realizado por tres estudiantes.
+
+No debe parecer una plataforma empresarial construida por un equipo de cincuenta desarrolladores.
+
+Si una solución sencilla funciona correctamente y puede ser explicada por los estudiantes, preferirla.
