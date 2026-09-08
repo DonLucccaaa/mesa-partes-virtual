@@ -157,3 +157,17 @@ los datos del documento, el código de seguimiento y el estado inicial
 El dashboard de usuario consulta únicamente sus documentos y permite abrir el
 detalle y el PDF. La ruta pública `/track` consulta un código de seguimiento
 sin requerir autenticación y no muestra datos personales ni rutas internas.
+
+El administrador puede consultar todos los documentos desde `/admin`, abrir el
+detalle administrativo y actualizar el estado con una observación. Los estados
+permitidos son `RECIBIDO`, `EN_REVISION`, `ATENDIDO` y `RECHAZADO`.
+
+El detalle ciudadano y el detalle administrativo muestran el historial de
+estados en orden cronológico. Cada documento comienza con una entrada
+`RECIBIDO`; cada cambio administrativo agrega una nueva entrada sin borrar las
+anteriores.
+
+El panel `/admin` también muestra estadísticas simples por estado. El sistema
+registra en `audit_logs` únicamente las acciones `REGISTER`, `LOGIN`,
+`CREATE_DOCUMENT`, `UPDATE_DOCUMENT_STATUS` y `DOWNLOAD_DOCUMENT`, sin guardar
+contraseñas ni tokens.

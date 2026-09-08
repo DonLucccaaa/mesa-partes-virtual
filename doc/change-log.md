@@ -421,3 +421,168 @@ HU05 y HU06 - Consulta de documentos del ciudadano y seguimiento público.
 ### Estado
 
 - COMPLETADO
+
+## 2026-09-07 - PROMPT 08 Panel administrativo y cambio de estado
+
+### Solicitud relacionada
+
+Implementar el panel administrativo, el detalle de documentos para ADMIN y el cambio de estado con observación, sin agregar correo ni estadísticas.
+
+### Historia de usuario
+
+HU08 y HU09 - Visualización administrativa y actualización del estado documental.
+
+### Archivos creados
+
+- Ninguno.
+
+### Archivos modificados
+
+- `backend/src/app.js`
+- `frontend/src/views/AdminView.vue`
+- `frontend/src/views/AdminDocumentDetailView.vue`
+- `frontend/src/style.css`
+- `README.md`
+- `doc/change-log.md`
+
+### Cambios realizados
+
+- Se agregó `GET /api/admin/documents`, protegido por `authenticateToken` y `requireAdmin`, con todos los documentos ordenados por fecha descendente.
+- El listado administrativo incluye código, nombre del ciudadano, asunto, tipo, estado y fecha de creación.
+- Se agregó `GET /api/admin/documents/:id` con datos del documento y datos básicos del ciudadano.
+- Se agregó `GET /api/admin/documents/:id/file` para visualizar el PDF desde el panel.
+- Se agregó `PATCH /api/admin/documents/:id/status`.
+- Se validan exclusivamente los estados `RECIBIDO`, `EN_REVISION`, `ATENDIDO` y `RECHAZADO`.
+- Se actualizan `status`, `observation` y `updated_at`.
+- El detalle administrativo refresca los datos después de un cambio y muestra confirmación.
+- El ciudadano ve el nuevo estado y observación mediante sus endpoints existentes.
+
+### Decisiones técnicas
+
+- Todas las rutas administrativas validan el JWT y el rol ADMIN.
+- No se aceptan identificadores de usuario desde el frontend para localizar documentos; el documento se identifica por su ruta y sus relaciones se obtienen desde PostgreSQL.
+- No se implementaron correo, estadísticas ni auditoría.
+- No se agregó historial de estados porque permanece fuera del alcance solicitado.
+
+### Pruebas realizadas
+
+- `npm run build` en `frontend`: compilación exitosa.
+- Listado ADMIN: respondió `200`, incluyó el documento y el nombre del ciudadano.
+- Detalle ADMIN: respondió `200` con datos del ciudadano sin exponer `file_path`.
+- PDF administrativo: respondió `200` como `application/pdf`.
+- USER en endpoint administrativo: respondió `403`.
+- Se probaron los cuatro estados permitidos; todos respondieron `200` y persistieron observación.
+- Estado inválido: respondió `400`.
+- Consulta ciudadana posterior: reflejó el último estado `RECHAZADO` y su observación.
+- Los datos, archivos y usuarios temporales fueron eliminados.
+
+### Estado
+
+- COMPLETADO
+
+## 2026-09-07 - PROMPT 09 Historial de estados
+
+### Solicitud relacionada
+
+Implementar el historial básico de estados para ciudadanos y administradores utilizando la tabla `status_history`.
+
+### Historia de usuario
+
+HU10 - Visualización del historial de estados.
+
+### Archivos creados
+
+- Ninguno.
+
+### Archivos modificados
+
+- `backend/src/app.js`
+- `frontend/src/views/DocumentDetailView.vue`
+- `frontend/src/views/AdminDocumentDetailView.vue`
+- `frontend/src/style.css`
+- `README.md`
+- `doc/change-log.md`
+
+### Cambios realizados
+
+- Al crear un documento se registra en la misma transacción una entrada inicial `RECIBIDO`.
+- Cada cambio administrativo de estado actualiza `documents` y agrega una nueva entrada en `status_history` dentro de una única transacción.
+- El historial guarda estado, observación, administrador responsable y fecha.
+- Se agregaron consultas protegidas para el historial ciudadano y administrativo.
+- El ciudadano solo puede consultar el historial de sus propios documentos.
+- El administrador puede consultar el historial de cualquier documento desde su detalle.
+- Ambos detalles muestran el historial en orden cronológico y las observaciones cuando existen.
+
+### Decisiones técnicas
+
+- Las operaciones de creación y cambio de estado son atómicas: si falla el historial, tampoco se conserva el cambio principal.
+- No se eliminan ni actualizan entradas anteriores.
+- La entrada inicial no tiene administrador responsable porque la crea el sistema; los cambios posteriores guardan el administrador autenticado.
+- Se mantiene la clave foránea existente entre `status_history` y `documents`.
+
+### Pruebas realizadas
+
+- `node --check backend/src/app.js` y `node --check backend/src/middleware/auth.js`: sintaxis válida.
+- `npm run build` en `frontend`: compilación exitosa.
+- Documento temporal creado con entrada inicial `RECIBIDO`.
+- Se aplicaron tres cambios: `EN_REVISION`, `ATENDIDO` y `RECHAZADO`.
+- El historial devolvió cuatro entradas en orden cronológico y conservó las tres observaciones.
+- Las entradas de cambios mostraron al administrador responsable.
+- El ciudadano consultó su historial correctamente.
+- El acceso de ADMIN al endpoint ciudadano respondió `403`.
+- Se eliminó el fixture temporal borrando primero su historial por la clave foránea.
+
+### Estado
+
+- COMPLETADO
+
+## 2026-09-07 - PROMPT 10 Funcionalidades secundarias
+
+### Solicitud relacionada
+
+Implementar estadísticas administrativas simples y auditoría básica sin cambiar la arquitectura ni crear una interfaz de auditoría.
+
+### Historia de usuario
+
+No aplica - funcionalidades secundarias administrativas.
+
+### Archivos creados
+
+- Ninguno.
+
+### Archivos modificados
+
+- `backend/src/app.js`
+- `frontend/src/views/AdminView.vue`
+- `frontend/src/style.css`
+- `README.md`
+- `doc/change-log.md`
+
+### Cambios realizados
+
+- Se agregó `GET /api/admin/stats`, protegido para ADMIN, con total de documentos y conteos por estado.
+- Se agregaron tarjetas simples al panel `/admin`.
+- Se creó la función reutilizable `recordAudit`.
+- Se registran únicamente `REGISTER`, `LOGIN`, `CREATE_DOCUMENT`, `UPDATE_DOCUMENT_STATUS` y `DOWNLOAD_DOCUMENT`.
+- Los eventos de creación y cambio de estado se registran dentro de sus transacciones.
+- Las descargas se registran únicamente cuando el archivo se entrega correctamente.
+- Las descripciones de auditoría no contienen contraseñas, tokens ni información sensible.
+
+### Decisiones técnicas
+
+- No se instalaron librerías de gráficos ni se creó una interfaz administrativa para auditar.
+- Las estadísticas se calculan directamente mediante agregaciones SQL.
+- La auditoría reutiliza el mismo ejecutor SQL o cliente de transacción sin crear una nueva capa arquitectónica.
+
+### Pruebas realizadas
+
+- `node --check backend/src/app.js`: sintaxis válida.
+- `npm run build` en `frontend`: compilación exitosa.
+- `GET /api/admin/stats` respondió con total y conteos por estado.
+- Se verificaron eventos `REGISTER`, `LOGIN`, `CREATE_DOCUMENT`, `UPDATE_DOCUMENT_STATUS` y `DOWNLOAD_DOCUMENT`.
+- La descarga de PDF generó auditoría para ciudadano y administrador.
+- Las pruebas temporales de estadísticas y auditoría fueron limpiadas.
+
+### Estado
+
+- COMPLETADO
