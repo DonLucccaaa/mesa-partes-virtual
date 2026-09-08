@@ -1,0 +1,16 @@
+{
+  "name": "mesa-partes-virtual-backend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "node src/app.js",
+    "seed:admin": "node scripts/create-admin.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "pg": "^8.13.1"
+  }
+}

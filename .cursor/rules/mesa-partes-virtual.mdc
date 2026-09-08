@@ -29,6 +29,8 @@ La prioridad del proyecto es:
 3. Que sea sencillo de explicar durante una exposición.
 4. Que pueda relacionarse claramente con las historias de usuario del Scrum.
 5. Que no contenga arquitectura, abstracciones ni funcionalidades innecesarias.
+6. Que cada cambio realizado quede documentado para facilitar el seguimiento del desarrollo.
+7. Que el entorno de base de datos pueda ejecutarse fácilmente mediante Docker.
 
 # PRINCIPIO PRINCIPAL
 
@@ -41,6 +43,110 @@ No agregar funcionalidades que no hayan sido solicitadas.
 No implementar anticipadamente historias de usuario futuras.
 
 No reorganizar código que ya funciona salvo que sea estrictamente necesario.
+
+Todo cambio realizado debe quedar registrado en:
+
+```text
+doc/change-log.md
+```
+
+# REGISTRO OBLIGATORIO DE CAMBIOS
+
+Cada vez que el usuario proporcione un prompt o solicite una modificación, implementación, corrección, configuración, revisión o documentación del proyecto, se debe actualizar obligatoriamente:
+
+```text
+doc/change-log.md
+```
+
+Si el archivo o el directorio no existen, crearlos.
+
+El registro debe documentar cada solicitud atendida, incluso si el cambio fue pequeño o consistió únicamente en una corrección.
+
+Cada entrada debe incluir como mínimo:
+
+* fecha;
+* título o resumen del cambio;
+* prompt o solicitud relacionada;
+* historia de usuario relacionada, si corresponde;
+* archivos creados;
+* archivos modificados;
+* descripción breve de lo realizado;
+* decisiones técnicas relevantes;
+* pruebas realizadas;
+* resultado de las pruebas;
+* errores, limitaciones o pendientes.
+
+Utilizar un formato sencillo y cronológico. Las entradas más recientes deben agregarse al final del archivo para conservar el historial.
+
+Formato recomendado:
+
+```markdown
+## YYYY-MM-DD - Título del cambio
+
+### Solicitud relacionada
+
+Descripción breve de la solicitud o prompt atendido.
+
+### Historia de usuario
+
+HUXX - Nombre de la historia de usuario
+
+Si no corresponde a una historia de usuario, indicar:
+
+No aplica - configuración, corrección, documentación o mantenimiento.
+
+### Archivos creados
+
+- `ruta/al/archivo`
+
+Si no se crearon archivos:
+
+- Ninguno.
+
+### Archivos modificados
+
+- `ruta/al/archivo`
+
+Si no se modificaron archivos:
+
+- Ninguno.
+
+### Cambios realizados
+
+Descripción breve y clara de la implementación.
+
+### Decisiones técnicas
+
+- Decisión tomada y motivo.
+- Dependencias utilizadas, si corresponde.
+- Limitaciones conocidas, si corresponde.
+
+### Pruebas realizadas
+
+- Prueba ejecutada.
+- Resultado obtenido.
+
+### Estado
+
+- COMPLETADO
+- PARCIAL
+- PENDIENTE
+- BLOQUEADO
+```
+
+No copiar necesariamente el prompt completo si es demasiado extenso. Registrar un resumen fiel que permita entender qué se solicitó y qué se hizo.
+
+No registrar contraseñas, tokens, claves privadas, credenciales SMTP, valores reales de `.env` ni otra información sensible.
+
+La actualización de `doc/change-log.md` forma parte obligatoria de cada tarea y debe realizarse junto con los demás cambios, no como una tarea opcional posterior.
+
+Después de implementar cualquier solicitud, verificar que:
+
+1. `doc/change-log.md` exista.
+2. La nueva entrada esté agregada.
+3. La entrada describa correctamente los archivos y pruebas.
+4. No contenga secretos.
+5. El estado refleje la situación real del cambio.
 
 # STACK OBLIGATORIO
 
@@ -84,8 +190,9 @@ Evitar dependencias adicionales.
 ## Base de datos
 
 * PostgreSQL
-* paquete pg
+* paquete `pg`
 * consultas SQL directas
+* PostgreSQL ejecutado mediante Docker Compose
 
 NO utilizar:
 
@@ -94,24 +201,172 @@ NO utilizar:
 * TypeORM
 * otro ORM
 
+# DOCKER Y POSTGRESQL
+
+La base de datos PostgreSQL debe ejecutarse mediante Docker Compose para facilitar la instalación y ejecución del proyecto.
+
+CloudBeaver es opcional y no es necesario para el funcionamiento del sistema. No agregarlo por defecto. Solo incorporarlo si el usuario lo solicita explícitamente.
+
+Crear, si no existe, un archivo:
+
+```text
+docker-compose.yml
+```
+
+La configuración mínima recomendada es:
+
+```yaml
+services:
+  postgres:
+    image: postgres:18
+    container_name: postgres_db
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: Admin1234!
+      POSTGRES_DB: appdb
+
+    volumes:
+      - postgres_data:/var/lib/postgresql
+
+    ports:
+      - "5432:5432"
+
+    networks:
+      - database_network
+
+volumes:
+  postgres_data:
+
+networks:
+  database_network:
+```
+
+La contraseña incluida en el archivo de ejemplo es únicamente para el entorno académico local. No utilizarla en producción.
+
+Si el proyecto utiliza un archivo `.env`, la conexión del backend debe configurarse mediante variables de entorno. Por ejemplo:
+
+```env
+PORT=3000
+DATABASE_URL=postgresql://admin:Admin1234!@localhost:5432/appdb
+JWT_SECRET=una_clave_local_de_desarrollo
+```
+
+No registrar valores reales de estas variables en `doc/change-log.md`.
+
+El backend debe conectarse a PostgreSQL utilizando el paquete `pg`.
+
+Cuando el backend se ejecute directamente en la computadora anfitriona, debe utilizar:
+
+```text
+localhost:5432
+```
+
+Si posteriormente el backend también se ejecuta dentro de Docker Compose, debe utilizar como host el nombre del servicio:
+
+```text
+postgres
+```
+
+No crear un contenedor para el backend ni para el frontend salvo que el usuario lo solicite explícitamente.
+
+No agregar CloudBeaver por defecto.
+
+No agregar servicios adicionales, redes adicionales ni volúmenes adicionales salvo que sean necesarios.
+
+# COMANDOS BÁSICOS DE DOCKER
+
+La documentación del proyecto debe indicar como mínimo:
+
+Iniciar PostgreSQL:
+
+```bash
+docker compose up -d postgres
+```
+
+Verificar los contenedores:
+
+```bash
+docker compose ps
+```
+
+Ver los logs de PostgreSQL:
+
+```bash
+docker compose logs postgres
+```
+
+Detener PostgreSQL:
+
+```bash
+docker compose stop postgres
+```
+
+Detener y eliminar los contenedores, conservando el volumen:
+
+```bash
+docker compose down
+```
+
+Detener y eliminar también los datos de PostgreSQL:
+
+```bash
+docker compose down -v
+```
+
+El comando `docker compose down -v` elimina la información almacenada en la base de datos. Utilizarlo únicamente cuando se desee reiniciar completamente la base de datos.
+
+# REINICIO DEL PLAN Y DEL DESARROLLO
+
+Si ya se generó un plan en Cursor, pero todavía no se ha implementado o aprobado completamente, no es necesario borrar todo el proyecto.
+
+Realizar lo siguiente:
+
+1. No ejecutar todavía el plan anterior.
+2. Actualizar esta regla del proyecto para incluir PostgreSQL y Docker.
+3. Crear o revisar `docker-compose.yml`.
+4. Revisar `database/schema.sql` y `database/seed.sql`.
+5. Confirmar que el backend utilice `pg` y `DATABASE_URL`.
+6. Crear un nuevo plan inicial que incluya la configuración de PostgreSQL.
+7. Revisar y aprobar el nuevo plan antes de pulsar Build.
+
+El nuevo orden recomendado es:
+
+```text
+1. Configurar Docker Compose y PostgreSQL
+2. Crear o adaptar schema.sql
+3. Crear o adaptar seed.sql
+4. Configurar la conexión del backend con pg
+5. Verificar que el backend pueda conectarse
+6. Implementar HU01 - Registro de usuario
+7. Implementar HU02 - Inicio de sesión
+8. Continuar con las demás historias
+```
+
+Si el primer plan ya fue implementado parcialmente, no reiniciar automáticamente todo el código ni eliminar archivos. Primero revisar el estado actual y realizar únicamente los cambios necesarios para adaptar la configuración a PostgreSQL mediante Docker.
+
+No borrar la base de datos ni los volúmenes salvo que el usuario lo solicite explícitamente o sea necesario para una reinicialización controlada.
+
 # ARQUITECTURA
 
 La arquitectura completa es:
 
+```text
 Navegador
 ↓
 Vue.js
 ↓ HTTP / JSON
 Express.js
-↓ SQL
-PostgreSQL
+↓ SQL mediante pg
+PostgreSQL ejecutado en Docker
+```
 
 No agregar otras capas de infraestructura.
 
 NO utilizar:
 
 * microservicios
-* Docker salvo solicitud explícita
 * GraphQL
 * Redis
 * RabbitMQ
@@ -123,56 +378,71 @@ NO utilizar:
 * patrones empresariales innecesarios
 * repositorios genéricos
 * clases abstractas innecesarias
+* contenedores adicionales sin solicitud explícita
+
+Docker se utiliza únicamente para ejecutar PostgreSQL, salvo solicitud explícita de ampliar la configuración.
 
 # ESTRUCTURA DEL PROYECTO
 
 Mantener aproximadamente esta estructura:
 
+```text
 mesa-partes/
-.cursor/
-rules/
-mesa-partes.mdc
+    .cursor/
+        rules/
+            mesa-partes.mdc
 
-```
-frontend/
-    src/
-        components/
-        views/
-        router/
-        services/
-        App.vue
-        main.js
-    package.json
+    doc/
+        change-log.md
 
-backend/
-    src/
-        controllers/
-        routes/
-        middleware/
-        db.js
-        app.js
-    uploads/
-    .env
-    package.json
+    frontend/
+        src/
+            components/
+            views/
+            router/
+            services/
+            App.vue
+            main.js
+        package.json
 
-database/
-    schema.sql
-    seed.sql
+    backend/
+        src/
+            controllers/
+            routes/
+            middleware/
+            db.js
+            app.js
+        uploads/
+        .env
+        package.json
 
-.gitignore
-README.md
+    database/
+        schema.sql
+        seed.sql
+
+    docker-compose.yml
+    .gitignore
+    README.md
 ```
 
 Pueden agregarse algunos archivos adicionales si son realmente necesarios.
 
 No crear directorios nuevos simplemente para aplicar patrones de arquitectura.
 
+El directorio `doc/` debe utilizarse para documentación del proyecto. Como mínimo debe contener:
+
+```text
+doc/change-log.md
+```
+
 # ROLES DEL SISTEMA
 
 Solo existen dos roles:
 
+```text
 USER
 ADMIN
+```
 
 USER representa a un ciudadano o usuario externo.
 
@@ -216,15 +486,18 @@ El sistema debe:
 4. Proteger las rutas que requieren autenticación.
 5. Diferenciar rutas USER y ADMIN.
 6. Enviar una notificación por correo cuando cambie el estado si existe configuración SMTP.
+7. Mantener un historial documental de los cambios realizados en `doc/change-log.md`.
 
 # ESTADOS DEL DOCUMENTO
 
 Utilizar únicamente:
 
+```text
 RECIBIDO
 EN_REVISION
 ATENDIDO
 RECHAZADO
+```
 
 No agregar más estados sin solicitud explícita.
 
@@ -232,10 +505,12 @@ No agregar más estados sin solicitud explícita.
 
 Mantener principalmente estas cuatro tablas:
 
+```text
 users
 documents
 status_history
 audit_logs
+```
 
 ## users
 
@@ -250,8 +525,10 @@ Debe almacenar como mínimo:
 
 Roles:
 
+```text
 USER
 ADMIN
+```
 
 La contraseña nunca debe almacenarse en texto plano.
 
@@ -292,13 +569,29 @@ Debe almacenar como mínimo:
 * description
 * created_at
 
+Las tablas deben crearse mediante:
+
+```text
+database/schema.sql
+```
+
+Los datos iniciales de prueba, incluyendo un usuario administrador si corresponde, deben definirse en:
+
+```text
+database/seed.sql
+```
+
+El backend no debe depender de un ORM ni de migraciones complejas.
+
 # CÓDIGO DE SEGUIMIENTO
 
 Utilizar un código similar a:
 
+```text
 MP-2026-00001
 MP-2026-00002
 MP-2026-00003
+```
 
 Debe ser único.
 
@@ -310,7 +603,9 @@ Solo se requiere adjuntar archivos PDF.
 
 Guardar físicamente los archivos dentro de:
 
+```text
 backend/uploads/
+```
 
 Guardar en PostgreSQL únicamente la ruta o nombre correspondiente.
 
@@ -324,21 +619,27 @@ Mantener una API pequeña.
 
 ## Autenticación
 
+```text
 POST /api/auth/register
 POST /api/auth/login
+```
 
 ## Ciudadano
 
+```text
 POST /api/documents
 GET /api/documents/my
-GET /api/documents/:id
-GET /api/documents/track/:code
+GET /api/documents/
+GET /api/documents/track/
+```
 
 ## Administrador
 
+```text
 GET /api/admin/documents
 PATCH /api/admin/documents/:id/status
 GET /api/admin/stats
+```
 
 Pueden existir endpoints auxiliares si son necesarios, pero evitar crear una API innecesariamente grande.
 
@@ -346,8 +647,8 @@ Pueden existir endpoints auxiliares si son necesarios, pero evitar crear una API
 
 Utilizar:
 
-bcryptjs para contraseñas.
-jsonwebtoken para JWT.
+* bcryptjs para contraseñas;
+* jsonwebtoken para JWT.
 
 El frontend puede almacenar el JWT en localStorage para este proyecto académico.
 
@@ -355,7 +656,9 @@ Las rutas protegidas del backend deben validar el token.
 
 Las rutas administrativas deben comprobar además que:
 
+```javascript
 role === "ADMIN"
+```
 
 No implementar sistemas complejos de refresh tokens.
 
@@ -371,14 +674,16 @@ Priorizar usabilidad sobre diseño avanzado.
 
 Las vistas aproximadas son:
 
+```text
 /login
 /register
 /track
 /dashboard
 /documents/new
-/documents/:id
+/documents
 /admin
-/admin/documents/:id
+/admin/documents
+```
 
 No agregar páginas innecesarias.
 
@@ -415,6 +720,7 @@ El desarrollo está relacionado directamente con historias de usuario.
 
 Historias principales:
 
+```text
 HU01 - Registro de usuario
 HU02 - Inicio de sesión
 HU03 - Registro de documento
@@ -428,14 +734,19 @@ HU10 - Historial de estados
 HU11 - Estadísticas administrativas
 HU12 - Auditoría
 HU13 - Notificación por correo
+```
 
 Cuando el usuario indique:
 
-"Implementemos HUXX"
+```text
+Implementemos HUXX
+```
 
 trabajar únicamente en esa historia y en los cambios mínimos que necesita.
 
 NO implementar historias posteriores anticipadamente.
+
+La configuración inicial de Docker, PostgreSQL, `schema.sql`, `seed.sql` y la conexión con `pg` se considera configuración técnica base. No debe implementar funcionalidades de historias de usuario que todavía no hayan sido solicitadas.
 
 # FORMA DE TRABAJO CON CADA HISTORIA
 
@@ -446,6 +757,18 @@ Antes de editar código:
 3. Identificar únicamente los archivos necesarios.
 4. No modificar código no relacionado.
 5. Mantener compatibilidad con lo desarrollado anteriormente.
+6. Revisar `doc/change-log.md` para conocer cambios previos relevantes.
+7. Verificar que PostgreSQL esté disponible mediante Docker cuando la historia lo requiera.
+8. Revisar el plan existente y actualizarlo si la configuración de base de datos cambió.
+
+Durante la planificación:
+
+1. Analizar primero el estado actual del proyecto.
+2. Identificar los archivos que probablemente serán creados o modificados.
+3. Explicar los pasos de implementación.
+4. Indicar las pruebas que se realizarán.
+5. No modificar código durante la etapa de planificación.
+6. Esperar la aprobación del usuario o la acción Build antes de implementar.
 
 Durante la implementación:
 
@@ -454,6 +777,10 @@ Durante la implementación:
 3. Evitar abstracciones innecesarias.
 4. Mantener nombres claros.
 5. Reutilizar código existente cuando sea apropiado.
+6. Utilizar consultas SQL parametrizadas.
+7. Actualizar `doc/change-log.md` con la solicitud y los cambios realizados.
+8. No agregar servicios Docker no solicitados.
+9. No agregar CloudBeaver salvo solicitud explícita.
 
 Después de la implementación:
 
@@ -462,7 +789,8 @@ Después de la implementación:
 3. Explicar brevemente qué se implementó.
 4. Dar pasos concretos para probar manualmente la funcionalidad.
 5. Señalar cualquier error o limitación encontrada.
-6. No continuar automáticamente con otra historia de usuario.
+6. Actualizar y verificar `doc/change-log.md`.
+7. No continuar automáticamente con otra historia de usuario.
 
 # CRITERIO DE DONE
 
@@ -470,10 +798,12 @@ Una historia puede considerarse DONE solamente cuando:
 
 * la funcionalidad solicitada está implementada;
 * frontend y backend están conectados cuando corresponda;
+* PostgreSQL funciona mediante Docker cuando corresponda;
 * la base de datos funciona cuando corresponda;
 * las validaciones principales funcionan;
 * puede probarse manualmente de principio a fin;
-* no existen errores que impidan utilizar la funcionalidad.
+* no existen errores que impidan utilizar la funcionalidad;
+* el cambio está documentado en `doc/change-log.md`.
 
 No considerar DONE una historia solamente porque una parte del frontend o backend está terminada.
 
@@ -483,18 +813,20 @@ Utilizar código JavaScript sencillo y fácil de explicar.
 
 Preferir:
 
+```text
 const
 async/await
 funciones pequeñas
 nombres descriptivos
+```
 
 Evitar:
 
-código excesivamente funcional
-metaprogramación
-abstracciones difíciles de explicar
-clases cuando una función sencilla sea suficiente
-comentarios innecesarios
+* código excesivamente funcional;
+* metaprogramación;
+* abstracciones difíciles de explicar;
+* clases cuando una función sencilla sea suficiente;
+* comentarios innecesarios.
 
 Comentar solamente cuando ayude a comprender una decisión.
 
@@ -504,6 +836,7 @@ Los endpoints deben responder con códigos HTTP razonables.
 
 Ejemplos:
 
+```text
 200 OK
 201 Created
 400 Bad Request
@@ -511,12 +844,15 @@ Ejemplos:
 403 Forbidden
 404 Not Found
 500 Internal Server Error
+```
 
 Las respuestas JSON pueden seguir una estructura sencilla:
 
+```json
 {
-"message": "Mensaje"
+  "message": "Mensaje"
 }
+```
 
 No crear una infraestructura compleja de errores.
 
@@ -531,7 +867,8 @@ Ejemplos:
 * contraseña no vacía;
 * archivo PDF;
 * documento existente;
-* estado válido.
+* estado válido;
+* conexión disponible con PostgreSQL.
 
 No agregar bibliotecas de validación salvo que sean realmente necesarias.
 
@@ -545,7 +882,8 @@ Implementar como mínimo:
 * validación del tipo PDF;
 * autorización por rol;
 * no exponer password en respuestas;
-* variables sensibles dentro de .env.
+* variables sensibles dentro de `.env`;
+* no publicar archivos `.env` en el repositorio.
 
 No construir infraestructura de seguridad empresarial.
 
@@ -553,19 +891,100 @@ No construir infraestructura de seguridad empresarial.
 
 Utilizar aproximadamente:
 
+```text
 PORT
 DATABASE_URL
 JWT_SECRET
+```
 
 Para correo, cuando corresponda:
 
+```text
 SMTP_HOST
 SMTP_PORT
 SMTP_USER
 SMTP_PASS
 SMTP_FROM
+```
 
 No colocar credenciales directamente en código.
+
+No registrar valores reales de estas variables en `doc/change-log.md`.
+
+El archivo `.env.example` puede contener nombres de variables y valores de ejemplo no sensibles.
+
+# GITIGNORE
+
+El archivo `.gitignore` debe excluir como mínimo:
+
+```text
+node_modules/
+.env
+backend/uploads/*
+!backend/uploads/.gitkeep
+```
+
+No excluir:
+
+```text
+docker-compose.yml
+database/schema.sql
+database/seed.sql
+```
+
+El archivo `docker-compose.yml` puede contener credenciales locales de desarrollo únicamente si el equipo acepta esa decisión para el proyecto académico. No utilizar credenciales reales ni reutilizadas de otros servicios.
+
+# DOCUMENTACIÓN DE CAMBIOS
+
+`doc/change-log.md` es el historial oficial de cambios del proyecto.
+
+Debe mantenerse actualizado durante todo el desarrollo.
+
+Cada solicitud del usuario debe generar una entrada, aunque:
+
+* no se modifique código;
+* solo se realice una revisión;
+* se corrija un error;
+* se actualice documentación;
+* se configure una herramienta;
+* se determine que no es necesario realizar cambios.
+
+Cuando no haya cambios de código, registrar:
+
+```markdown
+### Archivos creados
+
+- Ninguno.
+
+### Archivos modificados
+
+- `doc/change-log.md`
+
+### Cambios realizados
+
+Se revisó la solicitud y no fue necesario modificar la implementación.
+```
+
+No borrar entradas anteriores del historial salvo que el usuario lo solicite explícitamente.
+
+No reescribir todo el historial para registrar una nueva solicitud.
+
+# PLAN INICIAL RECOMENDADO
+
+Antes de implementar HU01, el plan inicial debe considerar únicamente la preparación técnica necesaria:
+
+1. Revisar la estructura actual del proyecto.
+2. Crear o adaptar `docker-compose.yml` con PostgreSQL.
+3. Crear o revisar `database/schema.sql`.
+4. Crear o revisar `database/seed.sql`.
+5. Crear o adaptar `backend/src/db.js`.
+6. Configurar `DATABASE_URL` en `.env.example`.
+7. Verificar la conexión del backend con PostgreSQL.
+8. Actualizar `README.md` con los comandos de ejecución.
+9. Actualizar `doc/change-log.md`.
+10. Ejecutar pruebas básicas de conexión.
+
+No implementar registro, login ni otras historias durante este plan, salvo que ya existan y sea estrictamente necesario adaptar su conexión a PostgreSQL.
 
 # PRINCIPIO FINAL
 
@@ -574,3 +993,13 @@ Este proyecto debe parecer y ser un proyecto universitario bien organizado reali
 No debe parecer una plataforma empresarial construida por un equipo de cincuenta desarrolladores.
 
 Si una solución sencilla funciona correctamente y puede ser explicada por los estudiantes, preferirla.
+
+Docker debe utilizarse únicamente para facilitar la ejecución local de PostgreSQL.
+
+CloudBeaver no es obligatorio y no debe agregarse salvo solicitud explícita.
+
+Cada cambio debe ser pequeño, comprensible, comprobable y documentado en:
+
+```text
+doc/change-log.md
+```

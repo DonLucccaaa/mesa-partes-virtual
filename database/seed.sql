@@ -1,0 +1,6 @@
+-- Los datos iniciales de usuario no se insertan aquí.
+-- La contraseña no debe quedar en texto plano en el repositorio.
+-- Para crear el administrador de desarrollo:
+--   cd backend
+--   definir ADMIN_PASSWORD en .env
+--   npm run seed:admin
