@@ -6,5 +6,7 @@
       proyecto.
     </p>
     <RouterLink to="/register">Crear una cuenta</RouterLink>
+    <RouterLink to="/login">Iniciar sesión</RouterLink>
+    <RouterLink to="/track">Consultar trámite</RouterLink>
   </main>
 </template>

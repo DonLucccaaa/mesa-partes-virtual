@@ -73,3 +73,20 @@ body {
 .error-message {
   color: #b42318;
 }
+
+.document-list {
+  display: grid;
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.document-card {
+  padding: 1rem;
+  border: 1px solid #d9e2ec;
+  border-radius: 6px;
+  background: #f8fafc;
+}
+
+.document-card h2 {
+  margin-top: 0;
+}

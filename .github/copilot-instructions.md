@@ -7,7 +7,7 @@ Antes de realizar cualquier trabajo debes leer obligatoriamente:
 @../.cursor/rules/mesa-partes.mdc
 @../doc/change-log.md
 
-Las reglas contenidas en `.cursor/rules/mesa-partes.mdc` son también las reglas generales de trabajo para GitHub Copilot CLI.
+Las reglas contenidas en `.cursor/rules/mesa-partes-virtual.mdc` son también las reglas generales de trabajo para GitHub Copilot CLI.
 
 `doc/change-log.md` contiene el historial real de modificaciones realizadas anteriormente por Cursor u otros agentes.
 
