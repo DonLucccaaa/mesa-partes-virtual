@@ -1,181 +1,215 @@
-<template>
-  <main class="home">
-    <p><RouterLink to="/admin">Volver al panel</RouterLink></p>
-    <p v-if="loading">Cargando documento...</p>
-    <p v-else-if="message && !document" class="error-message">{{ message }}</p>
-    <template v-else-if="document">
-      <h1>{{ document.subject }}</h1>
-      <p><strong>Código:</strong> {{ document.tracking_code }}</p>
-      <p><strong>Ciudadano:</strong> {{ document.citizen.name }}</p>
-      <p><strong>Correo:</strong> {{ document.citizen.email }}</p>
-      <p><strong>Tipo:</strong> {{ document.document_type }}</p>
-      <p><strong>Descripción:</strong> {{ document.description }}</p>
-      <p><strong>Estado actual:</strong> {{ document.status }}</p>
-      <p><strong>Observación:</strong> {{ document.observation || "Sin observaciones" }}</p>
-      <p><strong>Creado:</strong> {{ formatDate(document.created_at) }}</p>
-      <p><strong>Actualizado:</strong> {{ formatDate(document.updated_at) }}</p>
-      <button v-if="document.has_file" type="button" @click="openPdf">Ver PDF</button>
-      <h2>Historial de estados</h2>
-      <p v-if="historyMessage" class="error-message">{{ historyMessage }}</p>
-      <p v-else-if="history.length === 0">No hay historial disponible.</p>
-      <ol v-else class="status-history">
-        <li v-for="entry in history" :key="entry.id">
-          <strong>{{ entry.status }}</strong>
-          <span>{{ formatDate(entry.changed_at) }}</span>
-          <span v-if="entry.observation">Observación: {{ entry.observation }}</span>
-          <span v-if="entry.changed_by">Administrador: {{ entry.changed_by }}</span>
-        </li>
-      </ol>
-
-      <form class="status-form" @submit.prevent="updateStatus">
-        <label for="status">Nuevo estado</label>
-        <select id="status" v-model="status" required>
-          <option v-for="option in statuses" :key="option" :value="option">
-            {{ option }}
-          </option>
-        </select>
-        <label for="observation">Observación</label>
-        <textarea id="observation" v-model="observation" rows="4" />
-        <button type="submit" :disabled="saving">
-          {{ saving ? "Guardando..." : "Actualizar estado" }}
-        </button>
-      </form>
-      <p v-if="message" :class="messageType" role="status">{{ message }}</p>
-    </template>
-    <LogoutButton />
-  </main>
-</template>
-
 <script setup>
 import { onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
-import LogoutButton from "../components/LogoutButton.vue";
+import { api, formatDate, getStoredUser, openPdfBlob } from "../api";
+import StatusBadge from "../components/StatusBadge.vue";
+import StatusTimeline from "../components/StatusTimeline.vue";
 
 const route = useRoute();
 const document = ref(null);
 const loading = ref(true);
-const saving = ref(false);
-const message = ref("");
-const messageType = ref("");
+const error = ref("");
 const history = ref([]);
-const historyMessage = ref("");
+const historyError = ref("");
+
 const status = ref("");
 const observation = ref("");
+const saving = ref(false);
+const message = ref("");
+const messageType = ref("info");
 const statuses = ["RECIBIDO", "EN_REVISION", "ATENDIDO", "RECHAZADO"];
-
-function authHeaders() {
-  return {
-    Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-  };
-}
-
-function formatDate(value) {
-  return new Date(value).toLocaleString();
-}
+const adminName = getStoredUser()?.name || "Administrador";
 
 async function loadDocument() {
+  loading.value = true;
+  error.value = "";
+
   try {
-    const response = await fetch(
-      `http://localhost:3000/api/admin/documents/${route.params.id}`,
-      { headers: authHeaders() }
-    );
-    const data = await response.json();
-
-    if (!response.ok) {
-      message.value = data.message || "No se pudo cargar el documento";
-      return;
-    }
-
-    async function loadHistory() {
-      try {
-        const response = await fetch(
-          `http://localhost:3000/api/admin/documents/${route.params.id}/history`,
-          { headers: authHeaders() }
-        );
-        const data = await response.json();
-
-        if (!response.ok) {
-          historyMessage.value = data.message || "No se pudo cargar el historial";
-          return;
-        }
-
-        history.value = data.history;
-      } catch {
-        historyMessage.value = "No se pudo conectar con el servidor";
-      }
-    }
-
+    const data = await api.adminDocument(route.params.id);
     document.value = data.document;
     status.value = data.document.status;
     observation.value = data.document.observation || "";
-  } catch {
-    message.value = "No se pudo conectar con el servidor";
+    await loadHistory();
+  } catch (err) {
+    error.value = err.message || "No se pudo cargar el documento";
   } finally {
     loading.value = false;
   }
 }
 
-async function openPdf() {
-  const response = await fetch(
-    `http://localhost:3000/api/admin/documents/${route.params.id}/file`,
-    { headers: authHeaders() }
-  );
-
-  if (!response.ok) {
-    message.value = "No se pudo abrir el PDF";
-    messageType.value = "error-message";
-    return;
+async function loadHistory() {
+  try {
+    const data = await api.adminDocumentHistory(route.params.id);
+    history.value = data.history;
+    historyError.value = "";
+  } catch (err) {
+    historyError.value = err.message || "No se pudo cargar el historial";
   }
+}
 
-  const blob = await response.blob();
-  const url = URL.createObjectURL(blob);
-  window.open(url, "_blank", "noopener");
+async function openPdf() {
+  try {
+    const response = await api.adminDocumentPdf(route.params.id);
+    await openPdfBlob(response);
+  } catch (err) {
+    message.value = err.message || "No se pudo abrir el PDF";
+    messageType.value = "error";
+  }
 }
 
 async function updateStatus() {
   saving.value = true;
   message.value = "";
-  messageType.value = "";
+  messageType.value = "info";
 
   try {
-    const response = await fetch(
-      `http://localhost:3000/api/admin/documents/${route.params.id}/status`,
-      {
-        method: "PATCH",
-        headers: {
-          ...authHeaders(),
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          status: status.value,
-          observation: observation.value,
-        }),
-      }
-    );
-    const data = await response.json();
-
-    if (!response.ok) {
-      message.value = data.message || "No se pudo actualizar el estado";
-      messageType.value = "error-message";
-      return;
-    }
-
-    message.value = data.message;
-    messageType.value = "success-message";
+    const data = await api.adminUpdateStatus(route.params.id, {
+      status: status.value,
+      observation: observation.value,
+    });
+    message.value = data.message || "Estado actualizado correctamente";
+    messageType.value = "success";
     await loadDocument();
-    await loadHistory();
-  } catch {
-    message.value = "No se pudo conectar con el servidor";
-    messageType.value = "error-message";
+  } catch (err) {
+    message.value = err.message || "No se pudo actualizar el estado";
+    messageType.value = "error";
   } finally {
     saving.value = false;
   }
 }
 
-onMounted(async () => {
-  await loadDocument();
-  if (document.value) {
-    await loadHistory();
-  }
-});
+onMounted(loadDocument);
 </script>
+
+<template>
+  <main class="page">
+    <div class="container" style="max-width: 900px">
+      <p style="margin-bottom: 18px">
+        <RouterLink to="/admin" class="btn btn-ghost btn-sm">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+          Volver al panel
+        </RouterLink>
+      </p>
+
+      <div v-if="loading" class="loading-pane">
+        <div class="skeleton"></div>
+      </div>
+
+      <div v-else-if="error && !document" class="alert is-error" role="alert">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+        <span>{{ error }}</span>
+      </div>
+
+      <template v-else-if="document">
+        <section class="card pad-lg">
+          <div class="card-header">
+            <div style="min-width: 0">
+              <h1 class="page-title" style="font-size: 24px; margin-bottom: 6px">
+                {{ document.subject }}
+              </h1>
+              <span class="chip">{{ document.tracking_code }}</span>
+            </div>
+            <StatusBadge :status="document.status" />
+          </div>
+
+          <dl class="detail-grid" style="margin-top: 20px">
+            <div class="detail-item">
+              <dt class="detail-label">Ciudadano</dt>
+              <dd class="detail-value">{{ document.citizen.name }}</dd>
+            </div>
+            <div class="detail-item">
+              <dt class="detail-label">Correo</dt>
+              <dd class="detail-value">{{ document.citizen.email }}</dd>
+            </div>
+            <div class="detail-item">
+              <dt class="detail-label">Tipo de documento</dt>
+              <dd class="detail-value">{{ document.document_type }}</dd>
+            </div>
+            <div class="detail-item">
+              <dt class="detail-label">Fecha de registro</dt>
+              <dd class="detail-value">{{ formatDate(document.created_at) }}</dd>
+            </div>
+            <div class="detail-item">
+              <dt class="detail-label">Última actualización</dt>
+              <dd class="detail-value">{{ formatDate(document.updated_at) }}</dd>
+            </div>
+            <div class="detail-item">
+              <dt class="detail-label">Estado actual</dt>
+              <dd class="detail-value">{{ document.status }}</dd>
+            </div>
+            <div v-if="document.description" class="detail-item">
+              <dt class="detail-label">Descripción</dt>
+              <dd class="detail-value">{{ document.description }}</dd>
+            </div>
+          </dl>
+
+          <div
+            v-if="document.observation"
+            class="alert is-info"
+            style="margin-top: 20px"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+            <div><strong>Observación actual:</strong> {{ document.observation }}</div>
+          </div>
+
+          <div style="margin-top: 24px; display: flex; gap: 12px; flex-wrap: wrap">
+            <button
+              v-if="document.has_file"
+              type="button"
+              class="btn btn-secondary"
+              @click="openPdf"
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M8 13h8"/><path d="M8 17h5"/></svg>
+              Ver PDF
+            </button>
+          </div>
+        </section>
+
+        <section class="card" style="margin-top: 20px">
+          <p class="section-label">Historial de estados</p>
+          <div v-if="historyError" class="alert is-error">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+            <span>{{ historyError }}</span>
+          </div>
+          <StatusTimeline v-else :history="history" />
+        </section>
+
+        <section class="card" style="margin-top: 20px">
+          <p class="section-label">Actualizar estado</p>
+          <form @submit.prevent="updateStatus" style="max-width: 560px">
+            <div class="field">
+              <label class="label" for="status">Nuevo estado</label>
+              <select id="status" v-model="status" class="select" required>
+                <option v-for="option in statuses" :key="option" :value="option">
+                  {{ option }}
+                </option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label class="label" for="observation">Observación</label>
+              <textarea
+                id="observation"
+                v-model="observation"
+                class="textarea"
+                rows="3"
+                placeholder="Agrega una observación al cambio de estado…"
+              ></textarea>
+            </div>
+
+            <button class="btn btn-primary" type="submit" :disabled="saving">
+              <span v-if="saving" class="spinner"></span>
+              <svg v-else width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+              {{ saving ? "Guardando…" : "Actualizar estado" }}
+            </button>
+          </form>
+
+          <div v-if="message" class="alert" :class="`is-${messageType}`" style="margin-top: 18px" role="status">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+            <span>{{ message }}</span>
+          </div>
+        </section>
+      </template>
+    </div>
+  </main>
+</template>
