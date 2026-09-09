@@ -9,6 +9,8 @@ const multer = require("multer");
 const crypto = require("crypto");
 const fs = require("fs");
 const { pool, query } = require("./db");
+const swaggerUi = require("swagger-ui-express");
+const swaggerDocument = require("./swagger");
 const {
   authenticateToken,
   isJwtSecretConfigured,
@@ -144,6 +146,12 @@ async function removeUploadedFile(filePath) {
 
 app.use(cors());
 app.use(express.json());
+
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+
+app.get("/api-docs.json", (req, res) => {
+  res.json(swaggerDocument);
+});
 
 app.post("/api/auth/login", async (req, res) => {
   const body = req.body || {};
