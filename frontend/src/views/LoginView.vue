@@ -24,8 +24,11 @@
 
       <p v-if="message" class="error-message" role="alert">{{ message }}</p>
 
-      <RouterLink to="/register">Crear una cuenta</RouterLink>
-      <RouterLink to="/">Volver al inicio</RouterLink>
+
+<div class="links">
+  <RouterLink to="/register">Crear una cuenta</RouterLink>
+  <RouterLink to="/">Volver al inicio</RouterLink>
+</div>
     </section>
   </main>
 </template>

@@ -11,6 +11,7 @@ const fs = require("fs");
 const { pool, query } = require("./db");
 const {
   authenticateToken,
+  isJwtSecretConfigured,
   requireAdmin,
   requireUser,
 } = require("./middleware/auth");
@@ -172,8 +173,8 @@ app.post("/api/auth/login", async (req, res) => {
       });
     }
 
-    if (!process.env.JWT_SECRET) {
-      console.error("JWT_SECRET no está configurado");
+    if (!isJwtSecretConfigured()) {
+      console.error("JWT_SECRET no está configurado correctamente");
       return res.status(500).json({
         message: "La autenticación no está configurada correctamente",
       });

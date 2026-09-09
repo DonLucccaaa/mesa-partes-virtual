@@ -1,6 +1,24 @@
 const jwt = require("jsonwebtoken");
 
+const exampleJwtSecret = "cambiar_clave_local_de_desarrollo";
+
+function isJwtSecretConfigured() {
+  const secret = process.env.JWT_SECRET;
+  return Boolean(
+    secret &&
+    secret !== exampleJwtSecret &&
+    secret.length >= 32
+  );
+}
+
 function authenticateToken(req, res, next) {
+  if (!isJwtSecretConfigured()) {
+    console.error("JWT_SECRET no está configurado correctamente");
+    return res.status(500).json({
+      message: "La autenticación no está configurada correctamente",
+    });
+  }
+
   const authorization = req.headers.authorization || "";
   const [scheme, token] = authorization.split(" ");
 
@@ -42,6 +60,7 @@ function requireUser(req, res, next) {
 
 module.exports = {
   authenticateToken,
+  isJwtSecretConfigured,
   requireAdmin,
   requireUser,
 };

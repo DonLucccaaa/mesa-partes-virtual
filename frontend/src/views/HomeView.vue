@@ -5,8 +5,12 @@
       Sistema de gestión documental institucional. Esta es la página inicial del
       proyecto.
     </p>
+
+<div class="links">
     <RouterLink to="/register">Crear una cuenta</RouterLink>
     <RouterLink to="/login">Iniciar sesión</RouterLink>
     <RouterLink to="/track">Consultar trámite</RouterLink>
+
+</div>
   </main>
 </template>

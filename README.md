@@ -1,173 +1,264 @@
 # Mesa de Partes Virtual
 
-Proyecto académico de Fundamentos de Proyectos de Sistemas de Información.
+Sistema académico para registrar, consultar y gestionar documentos
+institucionales mediante una mesa de partes virtual.
 
-Stack: Vue.js, Express.js y PostgreSQL (Docker).
+## Tecnologías
+
+- Frontend: Vue 3, Vue Router, Vite, JavaScript y CSS.
+- Backend: Node.js, Express y API REST.
+- Base de datos: PostgreSQL con `pg` y consultas SQL directas.
+- Autenticación: bcryptjs y JWT.
+- Archivos: Multer y almacenamiento local en `backend/uploads/`.
+- PostgreSQL se ejecuta mediante Docker Compose.
 
 ## Requisitos
 
-- Node.js
-- Docker y Docker Compose
-- npm
+- Node.js y npm.
+- Docker y Docker Compose.
+- OpenSSL para generar un secreto JWT local.
 
-## PostgreSQL (Docker)
+## Instalación y configuración
 
-Iniciar:
+1. Instalar dependencias:
+
+   ```bash
+   cd backend
+   npm install
+   cd ../frontend
+   npm install
+   cd ..
+   ```
+
+2. Crear la configuración local del backend:
+
+   ```bash
+   cp backend/.env.example backend/.env
+   ```
+
+3. Editar `backend/.env`:
+
+   ```env
+   PORT=3000
+   DATABASE_URL=postgresql://admin:Admin1234!@localhost:5432/appdb
+   JWT_SECRET=REEMPLAZAR_CON_UN_SECRETO_ALEATORIO
+   ADMIN_PASSWORD=CONTRASENA_LOCAL_DEL_ADMIN
+   DEMO_USER_PASSWORD=CONTRASENA_LOCAL_DE_CIUDADANOS
+   ```
+
+   Generar un secreto seguro con:
+
+   ```bash
+   openssl rand -base64 32
+   ```
+
+   `backend/.env` no debe versionarse. El backend rechaza secretos JWT vacíos,
+   de ejemplo o menores de 32 caracteres.
+
+## PostgreSQL y schema
+
+Iniciar PostgreSQL:
 
 ```bash
 docker compose up -d postgres
 ```
 
-Verificar contenedores:
+Comprobar el contenedor:
 
 ```bash
 docker compose ps
 ```
 
-Ver logs:
-
-```bash
-docker compose logs postgres
-```
-
-Detener:
-
-```bash
-docker compose stop postgres
-```
-
-Detener y eliminar contenedores, conservando el volumen:
-
-```bash
-docker compose down
-```
-
-Detener y eliminar también los datos de PostgreSQL:
-
-```bash
-docker compose down -v
-```
-
-`docker compose down -v` borra la información de la base de datos. Usarlo solo si se desea reiniciar la base por completo.
-
-## Crear tablas
-
-Con el contenedor en ejecución:
+Crear las tablas:
 
 ```bash
 docker compose exec -T postgres psql -U admin -d appdb < database/schema.sql
 ```
 
-`database/seed.sql` no inserta usuarios. El administrador se crea con el script del backend.
+El esquema crea:
 
-## Crear el administrador de desarrollo
+- `users`;
+- `documents`;
+- `status_history`;
+- `audit_logs`.
 
-No hay inicio de sesión todavía. Este usuario sirve para pruebas posteriores.
+Para detener PostgreSQL:
 
-1. Asegurarse de que PostgreSQL está en ejecución y que el schema ya se aplicó.
-2. En `backend/.env` definir `ADMIN_PASSWORD` (no versionar ese archivo).
-3. Ejecutar:
+```bash
+docker compose stop postgres
+```
+
+Para detenerlo y conservar el volumen:
+
+```bash
+docker compose down
+```
+
+`docker compose down -v` elimina también la base de datos y debe utilizarse
+solo cuando se desea reiniciar todos los datos.
+
+## Datos de demostración
+
+Los datos de demostración no se cargan automáticamente. Después de aplicar el
+schema, definir `ADMIN_PASSWORD` y `DEMO_USER_PASSWORD` en `backend/.env` y
+ejecutar:
 
 ```bash
 cd backend
-npm install
+npm run seed:demo
+```
+
+El script es reconstruible y reemplaza únicamente los documentos asociados a
+los dos ciudadanos de demostración y sus registros de auditoría. Crea o
+actualiza:
+
+- un administrador: `admin@mesapartes.local`;
+- ciudadano 1: `ana.torres@demo.local`;
+- ciudadano 2: `luis.mendoza@demo.local`;
+- cuatro documentos con códigos `MP-DEMO-0001` a `MP-DEMO-0004`;
+- estados `RECIBIDO`, `EN_REVISION`, `ATENDIDO` y `RECHAZADO`;
+- historial acumulativo y auditoría básica.
+
+Los documentos de demostración tienen `file_path = NULL`, por lo que no
+dependen de archivos PDF inexistentes. Para demostrar la carga de un PDF real,
+utilizar `/documents/new` con una cuenta USER.
+
+El administrador también puede crearse o actualizarse por separado con:
+
+```bash
+cd backend
 npm run seed:admin
 ```
 
-El script crea o actualiza:
+## Ejecución
 
-- name: `Administrador`
-- email: `admin@mesapartes.local`
-- role: `ADMIN`
-
-La contraseña se hashea con bcryptjs y no se guarda en texto plano en el repositorio.
-
-Si en una etapa anterior quedó `admin@local.test`, ya no se usa. Se puede borrar a mano si se desea limpiar la tabla.
-
-## Backend
+Iniciar el backend:
 
 ```bash
 cd backend
-cp .env.example .env
-```
-
-Ajustar `DATABASE_URL` en `backend/.env` para apuntar a `localhost:5432`.
-
-```bash
-npm install
 npm run dev
 ```
 
-El API queda en `http://localhost:3000`.
+API: `http://localhost:3000`
 
-Comprobar salud y conexión a PostgreSQL:
+Comprobar PostgreSQL y el backend:
 
 ```bash
 curl http://localhost:3000/api/health
 ```
 
-Respuesta esperada:
-
-```json
-{"status":"ok","database":"connected"}
-```
-
-## Frontend
+Iniciar el frontend en otra terminal:
 
 ```bash
 cd frontend
-npm install
 npm run dev
 ```
 
-La página inicial queda en `http://localhost:5173`.
+Aplicación: `http://localhost:5173`
 
-Frontend y backend se ejecutan por separado.
+## Funcionalidades de USER
 
-## Iniciar sesión
+- Registrarse en `/register`.
+- Iniciar sesión en `/login`.
+- Consultar sus documentos en `/dashboard`.
+- Registrar documentos con PDF en `/documents/new`.
+- Ver detalle, observación, historial y PDF de sus documentos.
+- Consultar seguimiento público en `/track`.
+- Cerrar sesión eliminando la sesión local.
 
-La vista de inicio de sesión está disponible en `http://localhost:5173/login`.
-El backend expone `POST /api/auth/login`, compara la contraseña con bcryptjs y
-devuelve un JWT firmado con `JWT_SECRET`. El frontend guarda el token y los
-datos básicos del usuario en `localStorage`.
+## Funcionalidades de ADMIN
 
-Para probar como USER, registra primero un usuario desde `/register` y luego
-inicia sesión con ese correo y contraseña. El usuario será enviado a
-`/dashboard`.
+- Iniciar sesión con `admin@mesapartes.local`.
+- Ver todos los documentos en `/admin`.
+- Consultar ciudadano, detalle, PDF e historial.
+- Cambiar estados a `RECIBIDO`, `EN_REVISION`, `ATENDIDO` o `RECHAZADO`.
+- Agregar observaciones.
+- Consultar tarjetas de estadísticas por estado.
+- Generar registros de auditoría de las acciones permitidas.
 
-Para probar como ADMIN, ejecuta previamente `npm run seed:admin` con
-`ADMIN_PASSWORD` configurada en `backend/.env`, y utiliza el correo
-`admin@mesapartes.local`. El usuario será enviado a `/admin`.
+## Endpoints principales
 
-Los botones de cierre de sesión eliminan `token` y `user` de `localStorage` y
-envían al usuario a `/login`.
+| Método | Endpoint | Acceso | Uso |
+|---|---|---|---|
+| GET | `/api/health` | Público | Comprobar API y PostgreSQL |
+| POST | `/api/auth/register` | Público | Registrar USER |
+| POST | `/api/auth/login` | Público | Iniciar sesión y obtener JWT |
+| POST | `/api/documents` | USER | Registrar documento y PDF |
+| GET | `/api/documents/my` | USER | Listar documentos propios |
+| GET | `/api/documents/:id` | USER | Ver detalle propio |
+| GET | `/api/documents/:id/file` | USER | Ver PDF propio |
+| GET | `/api/documents/:id/history` | USER | Ver historial propio |
+| GET | `/api/documents/track/:trackingCode` | Público | Seguimiento por código |
+| GET | `/api/admin/documents` | ADMIN | Listar todos los documentos |
+| GET | `/api/admin/documents/:id` | ADMIN | Ver detalle administrativo |
+| GET | `/api/admin/documents/:id/file` | ADMIN | Ver PDF administrativo |
+| GET | `/api/admin/documents/:id/history` | ADMIN | Ver historial administrativo |
+| PATCH | `/api/admin/documents/:id/status` | ADMIN | Cambiar estado |
+| GET | `/api/admin/stats` | ADMIN | Consultar estadísticas |
 
-## Registrar un documento
+## Estructura principal
 
-Solo un usuario con rol `USER` y una sesión activa puede registrar documentos
-desde `http://localhost:5173/documents/new`.
+```text
+backend/
+  scripts/create-admin.js
+  scripts/seed-demo.js
+  src/app.js
+  src/db.js
+  src/middleware/auth.js
+  uploads/
+database/
+  schema.sql
+  seed.sql
+frontend/src/
+  components/LogoutButton.vue
+  router/index.js
+  views/
+docker-compose.yml
+```
 
-El formulario envía `subject`, `document_type`, `description` y el campo
-`file` como `multipart/form-data` a `POST /api/documents`. El archivo debe ser
-PDF, no superar los 10 MB y se guarda en `backend/uploads/`. PostgreSQL guarda
-únicamente la ruta relativa del archivo, junto con el usuario autenticado,
-los datos del documento, el código de seguimiento y el estado inicial
-`RECIBIDO`.
+## Archivos importantes para la exposición
 
-El dashboard de usuario consulta únicamente sus documentos y permite abrir el
-detalle y el PDF. La ruta pública `/track` consulta un código de seguimiento
-sin requerir autenticación y no muestra datos personales ni rutas internas.
+- `backend/src/db.js`: crea el `Pool` de PostgreSQL y expone `query`.
+- `backend/src/app.js`: contiene registro, login, documentos, Multer,
+  seguimiento, historial, estadísticas y auditoría.
+- `backend/src/middleware/auth.js`: valida JWT y separa USER de ADMIN.
+- `backend/scripts/create-admin.js`: crea el administrador con bcryptjs.
+- `backend/scripts/seed-demo.js`: reconstruye los datos de demostración.
+- `database/schema.sql`: define tablas, claves foráneas, estados y fechas.
+- `database/seed.sql`: documenta los comandos de carga inicial y demo.
+- `frontend/src/router/index.js`: define rutas y guard de autenticación/rol.
+- `frontend/src/views/RegisterView.vue`: formulario y `fetch()` de registro.
+- `frontend/src/views/LoginView.vue`: login, almacenamiento del JWT y
+  redirección por rol.
+- `frontend/src/components/LogoutButton.vue`: elimina `token` y `user`.
+- `frontend/src/views/DocumentsNewView.vue`: formulario multipart y `fetch()`
+  de registro de documentos.
+- `frontend/src/views/DashboardView.vue`: listado de documentos del ciudadano.
+- `frontend/src/views/DocumentDetailView.vue`: detalle, PDF e historial USER.
+- `frontend/src/views/AdminView.vue`: listado administrativo y estadísticas.
+- `frontend/src/views/AdminDocumentDetailView.vue`: cambio de estado, PDF e
+  historial ADMIN.
+- `backend/src/app.js`, función `handlePdfUpload`: Multer, extensión, MIME,
+  firma `%PDF-` y límite de 10 MB.
+- `backend/src/app.js`, función `generateTrackingCode`: código `MP-...`.
+- `backend/src/app.js`, función `recordAudit`: auditoría de cinco acciones.
 
-El administrador puede consultar todos los documentos desde `/admin`, abrir el
-detalle administrativo y actualizar el estado con una observación. Los estados
-permitidos son `RECIBIDO`, `EN_REVISION`, `ATENDIDO` y `RECHAZADO`.
+## Flujo recomendado para la exposición
 
-El detalle ciudadano y el detalle administrativo muestran el historial de
-estados en orden cronológico. Cada documento comienza con una entrada
-`RECIBIDO`; cada cambio administrativo agrega una nueva entrada sin borrar las
-anteriores.
-
-El panel `/admin` también muestra estadísticas simples por estado. El sistema
-registra en `audit_logs` únicamente las acciones `REGISTER`, `LOGIN`,
-`CREATE_DOCUMENT`, `UPDATE_DOCUMENT_STATUS` y `DOWNLOAD_DOCUMENT`, sin guardar
-contraseñas ni tokens.
+1. Mostrar la arquitectura, `docker-compose.yml` y ejecutar PostgreSQL.
+2. Aplicar `database/schema.sql` y explicar las cuatro tablas.
+3. Configurar `.env` y ejecutar `npm run seed:demo`.
+4. Iniciar backend y frontend; comprobar `/api/health`.
+5. Iniciar sesión como `admin@mesapartes.local` y mostrar `/admin`, las
+   estadísticas, los cuatro estados y el historial.
+6. Cerrar sesión y entrar como `ana.torres@demo.local`; mostrar `/dashboard`,
+   el detalle y el seguimiento `MP-DEMO-0002`.
+7. Crear un documento nuevo con un PDF válido para explicar Multer, la
+   asociación mediante JWT y el código de seguimiento.
+8. Volver al administrador, localizar el nuevo documento y cambiar su estado
+   con una observación.
+9. Regresar al ciudadano para mostrar el estado e historial actualizado.
+10. Consultar `/track` sin iniciar sesión y explicar que no expone datos
+    personales.
+11. Mostrar brevemente `audit_logs` y explicar que no almacena contraseñas ni
+    tokens.

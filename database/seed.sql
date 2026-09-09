@@ -4,3 +4,12 @@
 --   cd backend
 --   definir ADMIN_PASSWORD en .env
 --   npm run seed:admin
+--
+-- Para cargar datos de demostración reconstruibles:
+--   definir ADMIN_PASSWORD y DEMO_USER_PASSWORD en backend/.env
+--   cd backend
+--   npm run seed:demo
+--
+-- El script crea un administrador, dos ciudadanos y cuatro documentos sin
+-- archivos asociados. Los documentos incluyen estados e historial para la
+-- exposición, sin depender de PDF existentes.

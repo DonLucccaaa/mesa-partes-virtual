@@ -586,3 +586,127 @@ No aplica - funcionalidades secundarias administrativas.
 ### Estado
 
 - COMPLETADO
+
+## 2026-09-08 - PROMPT 11 Revisión de seguridad e integración
+
+### Solicitud relacionada
+
+Revisar la seguridad e integración del sistema existente y corregir únicamente
+problemas concretos, sin agregar nuevas funcionalidades.
+
+### Historia de usuario
+
+No aplica - revisión de seguridad, corrección y mantenimiento.
+
+### Archivos creados
+
+- Ninguno.
+
+### Archivos modificados
+
+- `backend/.env.example`
+- `backend/src/middleware/auth.js`
+- `backend/src/app.js`
+- `README.md`
+- `doc/change-log.md`
+
+### Cambios realizados
+
+- Se eliminó el secreto JWT conocido del archivo `.env.example`.
+- Se agregó validación para rechazar secretos JWT vacíos, de ejemplo o menores
+  de 32 caracteres.
+- Se actualizó la documentación para generar un secreto aleatorio durante la
+  configuración local.
+- Se revisaron contraseñas, JWT, consultas SQL, roles, propiedad de documentos,
+  carga de PDF, límites, estados, logout, variables sensibles y rutas públicas.
+
+### Decisiones técnicas
+
+- Se mantuvo la arquitectura existente y no se agregaron funcionalidades.
+- La validación se realiza en el middleware y durante el login, sin registrar
+  el valor del secreto.
+- Los archivos `.env` y los PDF cargados permanecen excluidos mediante
+  `.gitignore`.
+
+### Pruebas realizadas
+
+- `node --check backend/src/app.js`: correcto.
+- `node --check backend/src/middleware/auth.js`: correcto.
+- `npm run build` en `frontend`: correcto.
+- Revisión de consultas SQL: todas utilizan parámetros o constantes fijas.
+- Revisión de respuestas: no devuelven contraseñas ni rutas internas.
+- Revisión de aislamiento: USER no puede acceder a endpoints ADMIN ni a
+  documentos de otros usuarios.
+- Revisión de carga: solo PDF, máximo 10 MB, con verificación de firma.
+- Revisión de `localStorage`: logout elimina `token` y `user`.
+- Revisión de archivos sensibles: `.env` y PDF cargados no están versionados.
+
+### Estado
+
+- COMPLETADO
+
+## 2026-09-08 - PROMPT 12 Datos de demostración, README y preparación
+
+### Solicitud relacionada
+
+Preparar el proyecto para una demostración académica con datos reconstruibles,
+documentación actualizada y guía de exposición.
+
+### Historia de usuario
+
+No aplica - datos de demostración, documentación y preparación.
+
+### Archivos creados
+
+- `backend/scripts/seed-demo.js`
+
+### Archivos modificados
+
+- `backend/package.json`
+- `database/seed.sql`
+- `README.md`
+- `doc/change-log.md`
+
+### Cambios realizados
+
+- Se agregó el comando `npm run seed:demo`.
+- El seed crea o actualiza un administrador y dos ciudadanos usando contraseñas
+  proporcionadas por variables locales.
+- Se crean cuatro documentos con los estados `RECIBIDO`, `EN_REVISION`,
+  `ATENDIDO` y `RECHAZADO`.
+- Se agregan historiales acumulativos y registros de auditoría.
+- Los documentos demo no tienen `file_path`, por lo que no dependen de PDFs
+  inexistentes.
+- El seed elimina y reconstruye únicamente los documentos demo de los dos
+  ciudadanos, permitiendo repetirlo sin duplicados.
+- Se reescribió `README.md` para documentar instalación, PostgreSQL, schema,
+  variables, seed, funcionalidades, endpoints, estructura y exposición.
+
+### Decisiones técnicas
+
+- Las contraseñas de demostración no se guardan en el repositorio; se leen de
+  `ADMIN_PASSWORD` y `DEMO_USER_PASSWORD`.
+- No se cargan datos automáticamente al iniciar la aplicación.
+- Se mantuvo la arquitectura existente y no se agregaron dependencias.
+- Los PDFs reales se siguen creando desde `/documents/new`, separando la
+  demostración de carga de archivos de la demostración de estados.
+
+### Pruebas realizadas
+
+- `node --check backend/scripts/seed-demo.js`: correcto.
+- `npm run build` en `frontend`: correcto.
+- PostgreSQL iniciado mediante Docker Compose.
+- `database/schema.sql` aplicado correctamente.
+- `npm run seed:demo` ejecutado correctamente.
+- Segunda ejecución del seed completada sin duplicar usuarios ni documentos.
+- Consulta SQL confirmó un administrador, dos ciudadanos y dos documentos por
+  ciudadano.
+- Consulta SQL confirmó cuatro códigos demo, cuatro estados distintos,
+  historiales de 1 a 3 entradas y `file_path` nulo.
+- Consulta SQL confirmó registros `CREATE_DOCUMENT` y
+  `UPDATE_DOCUMENT_STATUS`.
+- `git diff --check`: sin errores de formato.
+
+### Estado
+
+- COMPLETADO

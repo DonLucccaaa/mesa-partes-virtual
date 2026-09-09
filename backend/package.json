@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "node src/app.js",
-    "seed:admin": "node scripts/create-admin.js"
+    "seed:admin": "node scripts/create-admin.js",
+    "seed:demo": "node scripts/seed-demo.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

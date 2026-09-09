@@ -136,3 +136,9 @@ body {
   display: grid;
   gap: 0.25rem;
 }
+
+
+.links {
+  display: flex;
+  gap: 20px;
+}
